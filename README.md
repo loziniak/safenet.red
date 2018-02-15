@@ -2,8 +2,8 @@
 
 Early Red and Red/System attempts. Goal: SAFE Network API bindings for Red.
 
-Usage:
+`./red -c -o bin/use_lib use_lib.reds`
 
-`./red func.red` or `./red -c -o bin/func func.red `
+`./red -c -o bin/use_lib use_lib.red`
 
-`./red -c -o bin/hello1 hello1.reds`
+`./red -c -o bin/use_reds use_reds.reds` - does not work, *Compilation Error: undefined word libc_pid*
