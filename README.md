@@ -2,8 +2,9 @@
 
 Early Red and Red/System attempts. Goal: SAFE Network API bindings for Red.
 
-`./red -c -o bin/use_lib use_lib.reds`
-
-`./red -c -o bin/use_lib use_lib.red`
-
-`./red -c -o bin/use_reds use_reds.reds` - does not work, *Compilation Error: undefined word libc_pid*
+```
+mkdir bin
+ln -s ../libsafe_app.so bin/
+./red -c -o bin/safe safe.red
+bin/safe
+```
