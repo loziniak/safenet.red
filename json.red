@@ -7,8 +7,10 @@ parser: object [
 	builder: none
 
 	process: function [txt [string!]] [
-		valid: parse txt [_ object _]
+;		valid: parse-trace txt [_ [object | array] _]
+		valid: parse txt [_ [object | array] _]
 		if not valid [
+			make error! [type: 'user id: 'message arg1: "Not a valid json"]
 		]
 		return builder/finish
 	]
@@ -24,13 +26,15 @@ parser: object [
 
 	name: ["^"" copy n [letter [any [letter | digit]]] "^""]
 
-	string: ["^"" any string-char "^""]
+	string: [copy p ["^"" any ["\^"" | string-char] "^""] (replace/all p "\^"" "\^^^"")]
 
-	primitive: [copy p [string | any val-char]]
+	primitive: [string | [copy p some val-char]]
+
+	values: [value (builder/add-to-block val)
+			any [_ "," _ value (builder/add-to-block val)]]
 
 	array: ["[" (builder/make-block)
-			_ value (builder/add-to-block val)
-			any [_ "," _ value (builder/add-to-block val)]
+			_ [values | none]
 			_ "]"
 		]
 
@@ -41,17 +45,19 @@ parser: object [
 
 	pair: [name (builder/with-name n) _ ":" _ value (builder/add-to-map val)]
 
-	object: ["{" (builder/make-map) _ pair any [_ "," _ pair] _ "}"]
+	pairs: [pair any [_ "," _ pair]]
+
+	object: ["{" (builder/make-map) _ [pairs | none] _ "}"]
 
 ]
 
 parser/builder: object [
 
-	stack: []
-	names: []
+	stack: copy []
+	names: copy []
 
 
-	make-block: function [] [append/only stack []]
+	make-block: function [] [append/only stack copy []]
 
 	add-to-block: function [v [default!]] [
 		append/only last stack v
@@ -79,6 +85,7 @@ parser/builder: object [
 		]
 		take/last stack
 	]
+
 
 	finish: function [] [
 		if 1 <> length? stack [
