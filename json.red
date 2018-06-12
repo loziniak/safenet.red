@@ -1,13 +1,12 @@
 Red [
 	Author: "loziniak"
-	Description: "Basic JSON parser using 'parse dialect"
+	Description: "Basic JSON parser and generator using 'parse dialect"
 ]
 
 parser: object [
 	builder: none
 
 	process: function [txt [string!]] [
-;		valid: parse-trace txt [_ [object | array] _]
 		valid: parse txt [_ [object | array] _]
 		if not valid [
 			make error! [type: 'user id: 'message arg1: "Not a valid json"]
@@ -98,7 +97,7 @@ parser/builder: object [
 ]
 
 
-compiler: object [
+generator: object [
 	process: function [what [map! block!]] [
 		render what
 	]
@@ -159,11 +158,15 @@ compiler: object [
 	]
 
 	filter-key: function [key] [
+		digit: parser/digit ;-- parse does not evaluate paths, only words
+		name-char: parser/name-char
+		not-name-char: parser/not-name-char
+
 		filtered: to-string key
 		parse filtered [
-			remove any [parser/not-name-char | parser/digit]
-			1 parser/name-char
-			any [parser/name-char | remove parser/not-name-char]
+			remove any [not-name-char | digit]
+			1 name-char
+			any [name-char | remove not-name-char]
 		]
 		return filtered
 	]
@@ -173,10 +176,10 @@ compiler: object [
 ;-- example:
 
 ;a: parser/process " { ^"y^" : ^"a5^" , ^"x^":[33.50000, 2018-06-11T23:00:03.502Z, {^"a^":3}]   , ^"test^":^"123^" }"
-;a: reduce [make map! [a 12.6 b 14.01%] make map! [a false b 14] now true]
+;a: reduce [make map! [a.c 12.6 b 14.01%] make map! [a false b 14] now true]
 ;probe a
 
-;b: compiler/process a
+;b: generator/process a
 ;probe b
 
 ;probe parser/process b
