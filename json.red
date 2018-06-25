@@ -9,7 +9,7 @@ parser: object [
 	process: function [txt [string!]] [
 		valid: parse txt [_ [object | array] _]
 		if not valid [
-			make error! [type: 'user id: 'message arg1: "Not a valid json"]
+			do make error! [type: 'user id: 'message arg1: "Not a valid json"]
 		]
 		return builder/finish
 	]
@@ -66,7 +66,7 @@ parser/builder: object [
 
 	take-block: function [] [
 		if not block? last stack [
-			make error! [type: 'user id: 'message arg1: "Not a block"]
+			do make error! "Not a block"
 		]
 		take/last stack
 	]
@@ -82,7 +82,7 @@ parser/builder: object [
 
 	take-map: function [] [
 		if not map? last stack [
-			make error! [type: 'user id: 'message arg1: "Not a map"]
+			do make error! "Not a map"
 		]
 		take/last stack
 	]
@@ -90,7 +90,7 @@ parser/builder: object [
 
 	finish: function [] [
 		if 1 <> length? stack [
-			make error! [type: 'user id: 'message arg1: "Not a last stack element"]
+			do make error! "Not a last stack element"
 		]
 		take/last stack
 	]
@@ -171,15 +171,3 @@ generator: object [
 		return filtered
 	]
 ]
-
-
-;-- example:
-
-;a: parser/process " { ^"y^" : ^"a5^" , ^"x^":[33.50000, 2018-06-11T23:00:03.502Z, {^"a^":3}]   , ^"test^":^"123^" }"
-;a: reduce [make map! [a.c 12.6 b 14.01%] make map! [a false b 14] now true]
-;probe a
-
-;b: generator/process a
-;probe b
-
-;probe parser/process b
