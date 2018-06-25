@@ -1,0 +1,98 @@
+Red [
+	Author: "loziniak"
+	Description: "HTTP client using curl command"
+]
+
+
+request: object [
+	url: none
+	method: 'GET
+	data: none
+	response: none
+
+	execute: function [] [
+		if none? url [
+			do make error! "No url."
+		]
+		if none? data [
+			data: copy ""
+		]
+
+		out: copy ""
+		err: copy ""
+
+		command: rejoin ["curl -i "
+			"-X " method " "
+			"--data ^"" mold to url! data "^" "
+			"^"" mold to url! url "^""]
+;		probe command
+
+		result: call/output/error command out err
+;		probe result
+;		probe out
+;		probe err
+		either result == 0 [
+			self/response: http-parser/process out
+		] [
+			do make error! rejoin ["Curl error: " err]
+		]
+	]
+
+	http-parser: object [
+		response: object [
+			status: none
+			status-message: none
+			headers: none
+			body: none
+		]
+
+		ws: charset reduce [space tab]
+		_: [any ws]
+		digit: charset "0123456789"
+		letter: charset [#"A" - #"Z" #"a" - #"z" #"_"]
+		header-value: charset reduce ['not crlf]
+		cr?lf: charset reduce [cr lf]
+		anything: charset reduce ['not ""]
+
+		status: [
+			"HTTP/1.1 "
+			copy s [3 digit] (response/status: to integer! s)
+			" "
+			copy sm [any header-value] (response/status-message: sm)
+		]
+
+		body: [copy b [any anything] (response/body: b)]
+
+		headers: [
+			some [
+				copy n [any [letter | "-"]] ": "
+				copy v [any header-value] cr?lf 
+				(put response/headers n v)
+			]
+		]
+
+		response-rule: [
+			status cr?lf
+			headers
+			0 1 [cr?lf body]
+		]
+
+		process: function [
+			curl-output [string!]
+		] [
+			self/response: make response [
+				status: 200
+				status-message: ""
+				headers: #()
+				body: ""
+			]
+
+			valid: parse curl-output response-rule
+			if not valid [
+				do make error! "Not a valid curl output."
+			]
+			return response
+		]
+	]
+
+]
