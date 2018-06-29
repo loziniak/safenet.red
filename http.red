@@ -7,24 +7,49 @@ Red [
 request: object [
 	url: none
 	method: 'GET
+	headers: #()
 	data: none
+	urlencode-data: true
 	response: none
 
 	execute: function [] [
 		if none? url [
 			do make error! "No url."
 		]
-		if none? data [
-			data: copy ""
+
+		if none? self/data [
+			self/data: copy ""
 		]
+		either urlencode-data [
+			self/data: mold to url! self/data
+		] [
+			replace/all self/data #"^"" "\^""
+		]
+
 
 		out: copy ""
 		err: copy ""
 
-		command: rejoin ["curl -i "
+		headers-options: copy ""
+		foreach header keys-of headers [
+			append headers-options rejoin [
+				"-H ^""
+				header
+				": "
+				select/case headers header
+				"^" "
+			]
+		]
+
+		command: rejoin [
+			"curl -i "
+;			"--trace-ascii % "
 			"-X " method " "
-			"--data ^"" mold to url! data "^" "
-			"^"" mold to url! url "^""]
+			headers-options
+			"--data ^"" self/data "^" "
+			"^"" mold to url! url "^""
+		]
+;		probe self/data
 ;		probe command
 
 		result: call/output/error command out err
@@ -33,6 +58,14 @@ request: object [
 ;		probe err
 		either result == 0 [
 			self/response: http-parser/process out
+
+			if self/response/status >= 300 [
+;			if not self/response/status = 200 [
+				do make error! rejoin [
+					"HTTP status " self/response/status
+					": " self/response/status-message
+				]
+			]
 		] [
 			do make error! rejoin ["Curl error: " err]
 		]
