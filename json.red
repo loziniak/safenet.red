@@ -7,6 +7,7 @@ parser: object [
 	builder: none
 
 	process: function [txt [string!]] [
+;		valid: parse-trace txt [_ [object | array] _]
 		valid: parse txt [_ [object | array] _]
 		if not valid [
 			do make error! [type: 'user id: 'message arg1: "Not a valid json"]
@@ -25,7 +26,7 @@ parser: object [
 
 	_: [any ws]
 
-	name: ["^"" copy n [letter [any name-char]] "^""]
+	name: ["^"" copy n [any name-char] "^""]
 
 	string: [copy p ["^"" any ["\^"" | string-char] "^""] (replace/all p "\^"" "\^^^"")]
 
@@ -74,7 +75,17 @@ parser/builder: object [
 
 	make-map: function [] [append stack make map! []]
 
-	with-name: function [name [string!]] [append names to word! name]
+	with-name: function [name [string!]] [
+		first-letter: to integer! first name
+		letters: parser/letter
+
+		either not letters/:first-letter [
+			key: to string! name
+		] [
+			key: to word! name
+		]
+		append names key
+	]
 
 	add-to-map: function [v [default!]] [
 		put last stack take/last names v
@@ -164,8 +175,6 @@ generator: object [
 
 		filtered: to-string key
 		parse filtered [
-			remove any [not-name-char | digit]
-			1 name-char
 			any [name-char | remove not-name-char]
 		]
 		return filtered
