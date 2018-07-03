@@ -17,15 +17,7 @@ request: object [
 			do make error! "No url."
 		]
 
-		if none? self/data [
-			self/data: copy ""
-		]
-		either urlencode-data [
-			self/data: mold to url! self/data
-		] [
-			replace/all self/data #"^"" "\^""
-		]
-
+		self/data: prepare-data self/data
 
 		out: copy ""
 		err: copy ""
@@ -69,6 +61,22 @@ request: object [
 		] [
 			do make error! rejoin ["Curl error: " err]
 		]
+	]
+
+	prepare-data: function [
+		d [string! none!]
+	] [
+		ret: copy []
+		unless none? d [
+			either urlencode-data [
+				ret: mold to url! d
+			] [
+				ret: copy d
+				replace/all ret #"\" "\\"
+				replace/all ret #"^"" "\^""
+			]
+		]
+		return ret
 	]
 
 	http-parser: object [
