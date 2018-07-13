@@ -105,7 +105,7 @@ request: object [
 		body: [copy b [any anything] (response/body: b)]
 
 		headers: [
-			some [
+			any [
 				copy n [any [letter | "-"]] ": "
 				copy v [any header-value] cr?lf 
 				(put response/headers n v)
@@ -113,9 +113,12 @@ request: object [
 		]
 
 		response-rule: [
-			status cr?lf
-			headers
-			0 1 [cr?lf body]
+			some [
+				status cr?lf
+				headers
+				0 1 cr?lf
+			]
+			0 1 body
 		]
 
 		process: function [
@@ -130,7 +133,7 @@ request: object [
 
 			valid: parse curl-output response-rule
 			if not valid [
-				do make error! "Not a valid curl output."
+				do make error! rejoin ["Not a valid curl output: " curl-output]
 			]
 			return response
 		]
