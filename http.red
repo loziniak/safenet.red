@@ -56,6 +56,7 @@ request: object [
 				do make error! rejoin [
 					"HTTP status " self/response/status
 					": " self/response/status-message
+					", Body: " self/response/body
 				]
 			]
 		] [
