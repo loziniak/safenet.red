@@ -15,6 +15,7 @@ parser: object [
 		return builder/finish
 	]
 
+	null-word: 'nul ;-- cannot use 'null, because in Red it's a synonym to #"^@"
 
 	ws: charset reduce [space tab cr lf]
 	letter: charset [#"A" - #"Z" #"a" - #"z" #"_"]
@@ -42,6 +43,7 @@ parser: object [
 
 	value: [object (val: builder/take-map) 
 			| array (val: builder/take-block)
+			| "null" (val: null-word)
 			| primitive (val: load p)
 		]
 
@@ -120,7 +122,11 @@ generator: object [
 			]
 
 			word? v [
-				return render get v
+				either v = parser/null-word [
+					return "null"
+				] [
+					return render get v
+				]
 			]
 
 			(integer? v) or
