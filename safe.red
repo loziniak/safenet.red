@@ -57,20 +57,20 @@ is_mock_build: routine [
 ]
 
 
-app_account_info: routine [
-	"Get the account usage statistics (mutations done and mutations available)."
-	app-ptr* [integer!]
-	red-callback [function!]
-	;   [mutations_done [integer!]   mutations_available [integer!]   error_code [integer!]   error_description [string!]]
-][
-
-	cb: func [ ;-- Based on Red's runtime block/compare-call code
+#system [
+	app_account_info_cb: func [ ;-- Based on Red's runtime block/compare-call code
 		[cdecl]
 		user_data [byte-ptr!] ;-- discarded
 		result [ffi_result!]
 		account_info [ffi_account_info!]
+		/local
+			cb [red-function!]
+			cb-ctx [node!]
 	][
 		; TODO: check red-callback's arguments spec (count? types?)
+		cb: as red-function! stack/pop 1
+		cb-ctx: cb/ctx   ;?-- not sure of that. maybe cb/more/obj/ctx should be more appropriate?
+
 		integer/push account_info/mutations_done/i2
 		integer/push account_info/mutations_available/i2
 		integer/push result/error_code
@@ -78,10 +78,20 @@ app_account_info: routine [
 			result/error_description
 			size? result/error_description
 			UTF-8
-;?		_function/call red-callback   ;-- ("undefined symbol: red-callback") How to make routine argument is not accessible? (reference: https://github.com/meijeru/red.specs-public/blob/master/specs.adoc#745-routine-type )
-		stack/unwind
-;?		stack/pop 1   ;-- Is it necessary? Callback should not return anything. But if it does, how to discard returned value?
-	]
 
-	safe_app_account_info app-ptr* null :cb
+		_function/call cb cb-ctx
+
+		stack/unwind
+		stack/pop 1   ;?-- Is it necessary? Callback should not return anything. But if it does, how to discard returned value?
+	]
+]
+
+app_account_info: routine [
+	"Get the account usage statistics (mutations done and mutations available)."
+	app-ptr* [integer!]
+	red-callback [function!]
+	; spec: [mutations_done [integer!]   mutations_available [integer!]   error_code [integer!]   error_description [string!]]
+][
+	stack/push as red-value! red-callback
+	safe_app_account_info app-ptr* null :app_account_info_cb
 ]
