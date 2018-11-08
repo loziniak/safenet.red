@@ -59,10 +59,11 @@ Red []
 
 			arg: args + 1
 			count: count - 1
-			until [
-;				print ["type:" arg/type lf] ;-- DEBUG
+			loop count [
+;				print ["type:" arg/type] ;-- DEBUG
 				switch arg/type [
 					type-integer! [
+;						print [" integer" lf] ;-- DEBUG
 						integer/push arg/value
 					]
 					default [
@@ -71,8 +72,6 @@ Red []
 				]
 
 				arg: arg + 1 ;-- next argument
-				count: count - 1
-				zero? count
 			]
 
 			_function/call cb global-ctx

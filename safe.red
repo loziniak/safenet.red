@@ -78,6 +78,58 @@ Red [
 
 
 
+	call-cb: func [
+		[typed]
+		count [integer!] args [typed-value!]
+		/local
+			result-arg [typed-value!]
+			result [ffi_result!]
+			arg [typed-value!]
+			cb [red-function!]
+			cb-word [red-word!]
+	] [
+		stack/pop 2
+		cb: as red-function! stack/top
+		cb-word: as red-word! stack/top + 1
+
+		result-arg: args + 0
+		result: as ffi_result! result-arg/value
+
+		print ["error_code: " result/error_code]
+
+		either result/error_code = 0 [
+			print lf
+			stack/reset
+
+			;-- TODO: the only reason for creating and passing 'cb_word'.
+			;-- can we avoid this and use only 'cb'?
+			;-- we could use anonymous functions then.
+			stack/mark-func cb-word cb/ctx
+
+			arg: args + 1
+			count: count - 1
+			loop count [
+;				print ["type:" arg/type] ;-- DEBUG
+				switch arg/type [
+					type-integer! [
+;						print [" integer" lf] ;-- DEBUG
+						integer/push arg/value
+					]
+					default [
+						print ["WARNING: unsupported type: " arg/type lf]
+					]
+				]
+
+				arg: arg + 1 ;-- next argument
+			]
+
+			_function/call cb global-ctx
+			stack/unwind
+		] [
+			print [" error_description: " result/error_description lf]
+		]
+	]
+
 	cb_void: func [
 		[cdecl]
 		user_data [byte-ptr!]
@@ -86,25 +138,8 @@ Red [
 			cb
 			cb-word
 	] [
-		print "cb_void: "
-		stack/pop 2
-		cb: as red-function! stack/top
-		cb-word: as red-word! stack/top + 1
-
-		print "error_code: "
-		print result/error_code
-
-		either result/error_code = 0 [
-			print lf
-			stack/reset
-			stack/mark-func cb-word cb/ctx
-			_function/call cb global-ctx
-			stack/unwind
-		] [
-			print " error_description: "
-			print result/error_description
-			print lf
-		]
+		print ["cb_void:" lf]
+		call-cb [result]
 	]
 
 	cb_safe_test_create_app: func [
@@ -116,31 +151,8 @@ Red [
 			cb
 			cb-word
 	] [
-		print "cb_safe_test_create_app: "
-		stack/pop 2
-		cb: as red-function! stack/top
-		cb-word: as red-word! stack/top + 1
-
-		print "error_code: "
-		print result/error_code
-
-		either result/error_code = 0 [
-			print lf
-			stack/reset
-
-			;-- TODO: the only reason for creating and passing 'cb_word'.
-			;-- can we avoid this and use only 'cb'?
-			;-- we could use anonymous functions then.
-			stack/mark-func cb-word cb/ctx
-
-			integer/push app_ptr
-			_function/call cb global-ctx
-			stack/unwind
-		] [
-			print " error_description: "
-			print result/error_description
-			print lf
-		]
+		print ["cb_safe_test_create_app:" lf]
+		call-cb [result app_ptr]
 	]
 
 	cb_safe_app_account_info: func [
@@ -152,27 +164,8 @@ Red [
 			cb
 			cb-word
 	] [
-		print "cb_safe_app_account_info: "
-		stack/pop 2
-		cb: as red-function! stack/top
-		cb-word: as red-word! stack/top + 1
-
-		print "error_code: "
-		print result/error_code
-
-		either result/error_code = 0 [
-			print lf
-			stack/reset
-			stack/mark-func cb-word cb/ctx
-			integer/push account_info/mutations_done/i2
-			integer/push account_info/mutations_available/i2
-			_function/call cb global-ctx
-			stack/unwind
-		] [
-			print " error_description: "
-			print result/error_description
-			print lf
-		]
+		print ["cb_safe_app_account_info:" lf]
+		call-cb [result account_info/mutations_done/i2 account_info/mutations_available/i2]
 	]
 
 ] ; #system
@@ -194,8 +187,8 @@ test_create_app: routine [
 		app-id-cstr
 ] [
 	app-id-cstr: unicode/to-utf8 app-id all-chars
-	stack/push as red-value! word/get cb-name
-	stack/push as red-value! cb-name
+	stack/push word/get cb-name
+	word/push cb-name
 	safe_test_create_app  app-id-cstr  as byte-ptr! 0  as byte-ptr! :cb_safe_test_create_app
 ]
 
@@ -205,8 +198,8 @@ app_account_info: routine [
 ] [
 	print "appptr"
 	print app-ptr
-	stack/push as red-value! word/get cb-name
-	stack/push as red-value! cb-name
+	stack/push word/get cb-name
+	word/push cb-name
 	safe_app_account_info  app-ptr  as byte-ptr! 0  as byte-ptr! :cb_safe_app_account_info ;-- no reaction. callback not fired.
 ]
 
@@ -217,8 +210,8 @@ open_uri: routine [
 		uri-cstr
 ] [
 	uri-cstr: unicode/to-utf8 uri all-chars
-	stack/push as red-value! word/get cb-name
-	stack/push as red-value! cb-name
+	stack/push word/get cb-name
+	word/push cb-name
 	system_open_uri  uri-cstr  as byte-ptr! 0  as byte-ptr! :cb_void
 ]
 
@@ -247,5 +240,5 @@ print-tca: function [
 ]
 
 
-;test_create_app "abcdef" 'print-tca
+test_create_app "abcdef" 'print-tca
 open_uri "http://diasp.eu" 'print-ok
