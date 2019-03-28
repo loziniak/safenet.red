@@ -41,13 +41,13 @@ request: object [
 			"--data ^"" self/data "^" "
 			"^"" mold to url! url "^""
 		]
-;		probe self/data
-;		probe command
+		;probe self/data
+		;probe command
 
 		result: call/output/error command out err
-;		probe result
-;		probe out
-;		probe err
+		;probe result
+		;probe out
+		;probe err
 		either result == 0 [
 			self/response: http-parser/process out
 
@@ -71,6 +71,12 @@ request: object [
 		unless none? d [
 			either urlencode-data [
 				ret: mold to url! d
+				replace/all ret #"&" "%26"
+				replace/all ret #":" "%3A"
+				replace/all ret #"/" "%2F"
+				replace/all ret #"#" "%23"
+				replace/all ret #"?" "%3F"
+				replace/all ret #"\" "%5C"
 			] [
 				ret: copy d
 				replace/all ret #"\" "\\"
