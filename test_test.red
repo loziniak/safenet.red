@@ -27,7 +27,8 @@ either outcome = #(failed: 1 passed: 1) [
 ]
 
 
-test-test: make suite []
+
+print "^/AUTO-TEST..."
 
 try-error-outcome: function [
 ] [
@@ -36,16 +37,15 @@ try-error-outcome: function [
 	test/try-error [1 / 0]
 	return test/run
 ]
+
+test-test: make suite []
 test-test/expect #(failed: 1 passed: 1) [try-error-outcome]
 
-print "^/"
 results: test-test/run
 print "results"
 print results
-if results/failed > 0 [
-	quit
+either results/failed > 0 [
+	print "... FAILED!"
+] [
+	print "... PASSED!"
 ]
-
-
-;-- we got here finally, soooo...
-print "^/AUTO-TEST PASSED!"
