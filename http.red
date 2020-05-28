@@ -3,6 +3,8 @@ Red [
 	Description: "HTTP client using curl command"
 ]
 
+; alternative:
+; https://github.com/red/red/wiki/%5BDOC%5D-Guru-Meditations#how-to-make-http-requests
 
 request: object [
 	url: none
@@ -10,14 +12,26 @@ request: object [
 	headers: #()
 	data: none
 	urlencode-data: true
-	response: none
+	response: object [
+		status: none
+		body: none
+	]
 
 	execute: function [] [
+		this-request: self
 		if none? url [
 			do make error! "No url."
 		]
 
-		self/data: prepare-data self/data
+		either system/platform = 'Windows [
+			executable: "curl.exe"
+			platform-options: "--insecure"
+		] [
+			executable: "curl"
+			platform-options: ""
+		]
+
+		this-request/data: prepare-data this-request/data
 
 		out: copy ""
 		err: copy ""
@@ -34,29 +48,25 @@ request: object [
 		]
 
 		command: rejoin [
-			"curl -i "
-;			"--trace-ascii % "
-			"-X " method " "
+			executable " -i " platform-options " "
+			"-X " this-request/method " "
 			headers-options
-			"--data ^"" self/data "^" "
-			"^"" mold to url! url "^""
+			"--data ^"" either none? this-request/data [""] [this-request/data] "^" "
+			"^"" mold to url! this-request/url "^""
 		]
-		;probe self/data
-		;probe command
 
 		result: call/output/error command out err
-		;probe result
-		;probe out
-		;probe err
 		either result == 0 [
-			self/response: http-parser/process out
+			response: http-parser/process out
+			this-request/response: response
 
-			if self/response/status >= 300 [
-;			if not self/response/status = 200 [
+			if any [
+				response/status >= 500
+			] [
 				do make error! rejoin [
-					"HTTP status " self/response/status
-					": " self/response/status-message
-					", Body: " self/response/body
+					"HTTP status " response/status
+					": " response/status-message
+					", Body: " response/body
 				]
 			]
 		] [
@@ -67,8 +77,10 @@ request: object [
 	prepare-data: function [
 		d [string! none!]
 	] [
-		ret: copy []
-		unless none? d [
+		either none? d [
+			none
+		] [
+			ret: copy ""
 			either urlencode-data [
 				ret: mold to url! d
 				replace/all ret #"&" "%26"
@@ -82,8 +94,8 @@ request: object [
 				replace/all ret #"\" "\\"
 				replace/all ret #"^"" "\^""
 			]
+			ret
 		]
-		return ret
 	]
 
 	http-parser: object [
@@ -103,7 +115,7 @@ request: object [
 		anything: charset reduce ['not ""]
 
 		status: [
-			"HTTP/1.1 "
+			["HTTP/1.1 " | "HTTP/2 "]
 			copy s [3 digit] (response/status: to integer! s)
 			" "
 			copy sm [any header-value] (response/status-message: sm)
@@ -130,6 +142,7 @@ request: object [
 
 		process: function [
 			curl-output [string!]
+			return: [object!]
 		] [
 			self/response: make response [
 				status: 200
